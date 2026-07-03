@@ -2,13 +2,16 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
+import { formatCoffeeAmount, parsePositiveGrams } from '../../lib/quickDecrement.ts';
 import { executeUpsertNote } from '../../tools/upsertNote.ts';
 
 function buildNoteData(args: Record<string, string | boolean | undefined>) {
   const noteData: Record<string, unknown> = {
     beanId: args['bean-id'],
-    method: args.method,
   };
+  if (typeof args.method === 'string') {
+    noteData.method = args.method;
+  }
 
   // 真实字段（优先使用）
   if (typeof args.equipment === 'string' && args.equipment) {
@@ -27,6 +30,13 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   if (typeof args['total-time'] === 'string' && args['total-time']) {
     const n = Number(args['total-time']);
     if (Number.isFinite(n)) noteData.totalTime = n;
+  }
+  const params: Record<string, unknown> = {};
+  if (typeof args.coffee === 'string' && args.coffee) {
+    params.coffee = args.coffee;
+  }
+  if (typeof args.water === 'string' && args.water) {
+    params.water = args.water;
   }
   const taste: Record<string, number> = {};
   for (const key of ['body', 'acidity', 'sweetness', 'bitterness'] as const) {
@@ -64,10 +74,29 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
     noteData.brewedAt = args['brewed-at'];
   }
 
+  const quickDecrementAmount = parsePositiveGrams(
+    args['quick-decrement-amount'],
+    '--quick-decrement-amount',
+  );
+  if (quickDecrementAmount !== undefined) {
+    noteData.source = typeof args.source === 'string' && args.source ? args.source : 'quick-decrement';
+    noteData.method = '';
+    noteData.equipment = '';
+    noteData.rating = 0;
+    noteData.notes = typeof args.notes === 'string' && args.notes ? args.notes : '快捷扣除';
+    noteData.totalTime = 0;
+    noteData.quickDecrementAmount = quickDecrementAmount;
+    params.coffee = formatCoffeeAmount(quickDecrementAmount);
+  }
+
+  if (Object.keys(params).length > 0) {
+    noteData.params = params;
+  }
+
   return noteData;
 }
 
-function exitWithError(message: string, code: number) {
+function exitWithError(message: string, code: number): never {
   console.error(message);
   process.exit(code);
 }
@@ -79,12 +108,15 @@ export default defineCommand({
   },
   args: {
     'bean-id': { type: 'string', required: true },
-    method: { type: 'string', required: true },
+    method: { type: 'string', description: 'Brewing method name. Required unless --quick-decrement-amount is set.' },
     equipment: { type: 'string', description: 'Equipment row id (e.g. V60, Espresso).' },
     rating: { type: 'string', description: 'Rating 0-5 (authoritative).' },
     source: { type: 'string', description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' },
     notes: { type: 'string', description: 'Free-form notes (authoritative; prefer over --memo).' },
     'total-time': { type: 'string', description: 'Total brew time in seconds (authoritative; prefer over --brew-time).' },
+    coffee: { type: 'string', description: 'params.coffee (e.g. "18g").' },
+    water: { type: 'string', description: 'params.water (e.g. "36g").' },
+    'quick-decrement-amount': { type: 'string', description: 'Create a quick-decrement note with this deducted amount in grams.' },
     'taste-body': { type: 'string', description: 'Taste body 0-5.' },
     'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },
     'taste-sweetness': { type: 'string', description: 'Taste sweetness 0-5.' },
@@ -103,7 +135,19 @@ export default defineCommand({
   },
   async run({ args }) {
     const logger = createCommandLogger(['note', 'add'], args as Record<string, unknown>);
-    const noteData = buildNoteData(args as Record<string, string | boolean | undefined>);
+    let noteData: Record<string, unknown>;
+    try {
+      noteData = buildNoteData(args as Record<string, string | boolean | undefined>);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      exitWithError(`Error: ${message}`, 2);
+    }
+    if (
+      typeof noteData.method !== 'string' &&
+      typeof noteData.quickDecrementAmount !== 'number'
+    ) {
+      exitWithError('Error: --method is required unless --quick-decrement-amount is set.', 2);
+    }
     const dryRun = args['dry-run'] === true;
     const jsonFormat = args.format === 'json';
 

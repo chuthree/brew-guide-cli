@@ -22,9 +22,10 @@ description: Use when the user wants to manage coffee beans, brewing notes, equi
 | `bean add` 新增咖啡豆 | `references/bean-add.md` |
 | `note add` 新增冲煮记录 | `references/note-add.md` |
 | `method add` 新增冲煮方案 | `references/method-add.md` |
+| 快捷扣除、拼配补豆、补变动记录 | `references/quick-decrement.md` |
 | 图片导入豆子时 OCR 失败 | `references/bean-image-import-fallback.md` |
 
-其他命令（list / get / update / delete / consume / equipment add 等）规则简单，直接按下表使用即可。
+其他命令（list / get / update / delete / equipment add 等）规则简单，直接按下表使用即可。
 
 ## CLI 命令总览
 
@@ -45,16 +46,16 @@ brew-guide init
 | `bean get` | 详情 | `brew-guide bean get <id> [--format json]` |
 | `bean update` | 更新 | `brew-guide bean update <id> --remaining "..." [--origin "..."] [--process "..."] [--variety "..."] [--estate "..."] [--roast-date "YYYY-MM-DD"] [--start-day 30] [--end-day 60] [--dry-run]`（origin/process/variety/estate 合并进 blendComponents[0]）|
 | `bean delete` | 软删除 | `brew-guide bean delete <id> [--dry-run]` |
-| `bean consume` | 扣减余量 | `brew-guide bean consume <id> --amount 15 [--with-note] [--source quick-decrement] [--dry-run]` |
+| `bean consume` | 扣减余量（快捷扣除见参考） | `brew-guide bean consume <id> --amount 15 [--with-note] [--source quick-decrement] [--dry-run]` |
 
 ### note — 冲煮记录
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
-| `note add` | 新增（见 `references/note-add.md`） | `brew-guide note add --bean-id "..." --method "..." [--equipment "V60"] [--rating 4] [--notes "..."] [--source tag] [--total-time 150] [--taste-body 4 --taste-acidity 4 --taste-sweetness 3 --taste-bitterness 2] [legacy flat flags] [--dry-run]` |
+| `note add` | 新增（见 `references/note-add.md`） | `brew-guide note add --bean-id "..." --method "..." [--equipment "V60"] [--rating 4] [--notes "..."] [--source tag] [--total-time 150] [--coffee "18g"] [--water "36g"] [--taste-body 4 --taste-acidity 4 --taste-sweetness 3 --taste-bitterness 2] [legacy flat flags] [--dry-run]` |
 | `note list` | 列出 | `brew-guide note list [--limit N] [--equipment V60] [--method 日式] [--bean-id "..."] [--min-rating 3.5] [--format json]` |
 | `note get` | 详情 | `brew-guide note get <id> [--format json]` |
-| `note update` | 更新 | `brew-guide note update <id> --rating 4 --notes "..." [--equipment "V60"] [--total-time 150] [--source tag] [--ratio "1:15"] [--grind-size "..."] [--water-temp 92] [--coffee "15g"] [--water "225g"] [--taste-body 4] [--dry-run]`（`--rating` / `--taste-*` 0–5；taste / params 部分更新与现有值合并）|
+| `note update` | 更新 | `brew-guide note update <id> --rating 4 --notes "..." [--equipment "V60"] [--total-time 150] [--source tag] [--ratio "1:15"] [--grind-size "..."] [--water-temp 92] [--coffee "15g"] [--water "225g"] [--quick-decrement-amount 1.5] [--taste-body 4] [--dry-run]`（`--rating` / `--taste-*` 0–5；taste / params 部分更新与现有值合并）|
 | `note delete` | 软删除 | `brew-guide note delete <id> [--dry-run]` |
 
 ### equipment — 器具

@@ -4,6 +4,7 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { consumeBean } from '../../services/beans.ts';
 import { executeUpsertNote } from '../../tools/upsertNote.ts';
+import { buildQuickDecrementNote } from '../../lib/quickDecrement.ts';
 
 function exitWithError(message: string, code: number) {
   console.error(message);
@@ -34,10 +35,11 @@ export default defineCommand({
 
     const source = typeof args.source === 'string' && args.source ? args.source : 'quick-decrement';
     const withNote = args['with-note'] === true;
+    const quickDecrementNote = buildQuickDecrementNote(args.id, amount, source);
 
     if (args['dry-run']) {
       const preview: Record<string, unknown> = { dryRun: true, action: 'consume', id: args.id, amount };
-      if (withNote) preview.note = { beanId: args.id, source, coffee: `${amount}g` };
+      if (withNote) preview.note = quickDecrementNote;
       if (args.format === 'json') {
         console.log(JSON.stringify(preview));
       } else {
@@ -60,12 +62,7 @@ export default defineCommand({
 
       if (withNote) {
         await executeUpsertNote(supabase, config, {
-          note: {
-            beanId: args.id,
-            source,
-            rating: 0,
-            params: { coffee: `${amount}g` },
-          },
+          note: quickDecrementNote,
         });
       }
 

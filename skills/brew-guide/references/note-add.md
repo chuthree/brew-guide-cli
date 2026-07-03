@@ -7,7 +7,7 @@
 必填：
 
 - `--bean-id`
-- `--method`
+- `--method`（普通冲煮记录必填；快捷扣除记录可用 `--quick-decrement-amount` 代替）
 
 **真实字段（优先使用）**：
 
@@ -16,6 +16,9 @@
 - `--source <tag>`   → `data.source`（例 `capacity-adjustment`、`quick-decrement`）
 - `--notes "..."`    → `data.notes`（`--memo` / `--flavor` 也会合并进同一字段）
 - `--total-time 150` → `data.totalTime`（秒，压过 `--brew-time`）
+- `--coffee "18g"`   → `params.coffee`
+- `--water "36g"`    → `params.water`
+- `--quick-decrement-amount 1.5` → `quickDecrementAmount` 且同步 `params.coffee = "1.5g"`；详见 `quick-decrement.md`
 - `--taste-body / --taste-acidity / --taste-sweetness / --taste-bitterness` 0–5 → `data.taste.{body,acidity,sweetness,bitterness}`
 
 **老字段（向后兼容，自动转换到真实形状）**：
@@ -34,6 +37,7 @@
 - `rating` (0–5，可小数)
 - `taste` (`{body, acidity, sweetness, bitterness}` 0–5 每项)
 - `notes`, `timestamp`, `totalTime`, `source`
+- `quickDecrementAmount`（仅快捷扣除记录）
 - `params.{temp, ratio, water, coffee, grindSize, stages}`
 - `equipment`（equipment 行 ID）
 - `coffeeBeanInfo`
@@ -64,6 +68,8 @@ brew-guide note add \
   --rating 4 \
   --notes "柑橘酸很明亮，花香明显；后段更甜，下次再细一点" \
   --total-time 150 \
+  --coffee "15g" \
+  --water "225g" \
   --ratio "1:15" \
   --grind-size "Comandante 24 clicks" \
   --water-temp 92 \
@@ -96,6 +102,12 @@ brew-guide note add \
 brew-guide bean consume <bean-id> --amount 15 --dry-run
 ```
 
+如果这是快捷扣除或拼配补豆的变动记录，先读 `quick-decrement.md`，优先用：
+
+```bash
+brew-guide bean consume <bean-id> --amount 1.5 --with-note --source quick-decrement --dry-run
+```
+
 ## 6. 更新冲煮记录
 
 支持更新 `--rating`（0–5）、`--method`、`--memo`：
@@ -109,4 +121,5 @@ brew-guide note update <id> --rating 4 --memo "回甘更好" --dry-run
 - ❌ 不要不关联 `bean-id` 就直接记冲煮
 - ❌ 不要跳过 dry-run
 - ❌ `--score` 范围 0–100；`--rating` 范围 0–5。不要混用
+- ❌ 快捷扣除不要只写 `notes`；必须写 `quickDecrementAmount` 和 `params.coffee`
 - ❌ 不要自己拼 `params` JSON —— 用 `--ratio/--water-temp/--grind-size` 扁平参数即可

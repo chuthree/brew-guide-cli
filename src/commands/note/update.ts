@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
+import { formatCoffeeAmount, parsePositiveGrams } from '../../lib/quickDecrement.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { updateNote } from '../../services/notes.ts';
 
@@ -28,6 +29,7 @@ export default defineCommand({
     'water-temp': { type: 'string', description: 'params.temp °C.' },
     coffee: { type: 'string', description: 'params.coffee.' },
     water: { type: 'string', description: 'params.water.' },
+    'quick-decrement-amount': { type: 'string', description: 'Set quickDecrementAmount and params.coffee in grams.' },
     'taste-body': { type: 'string', description: 'Taste body 0-5.' },
     'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },
     'taste-sweetness': { type: 'string', description: 'Taste sweetness 0-5.' },
@@ -60,6 +62,20 @@ export default defineCommand({
       updates.totalTime = n;
     }
     if (typeof args.source === 'string' && args.source) updates.source = args.source;
+    let quickDecrementAmount: number | undefined;
+    try {
+      quickDecrementAmount = parsePositiveGrams(
+        args['quick-decrement-amount'],
+        '--quick-decrement-amount',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      exitWithError(`Error: ${message}`, 2);
+    }
+    if (quickDecrementAmount !== undefined) {
+      updates.source = typeof args.source === 'string' && args.source ? args.source : 'quick-decrement';
+      updates.quickDecrementAmount = quickDecrementAmount;
+    }
 
     const paramsPatch: Record<string, unknown> = {};
     if (typeof args.ratio === 'string' && args.ratio) paramsPatch.ratio = args.ratio;
@@ -73,6 +89,9 @@ export default defineCommand({
       paramsPatch.temp = `${n}°C`;
     }
     if (typeof args.coffee === 'string' && args.coffee) paramsPatch.coffee = args.coffee;
+    if (quickDecrementAmount !== undefined) {
+      paramsPatch.coffee = formatCoffeeAmount(quickDecrementAmount);
+    }
     if (typeof args.water === 'string' && args.water) paramsPatch.water = args.water;
     if (Object.keys(paramsPatch).length > 0) updates.params = paramsPatch;
 
@@ -91,7 +110,7 @@ export default defineCommand({
     if (Object.keys(taste).length > 0) updates.taste = taste;
 
     if (Object.keys(updates).length === 0) {
-      console.error('No fields to update. Use --rating, --method, --memo, --notes, --equipment.');
+      console.error('No fields to update. Use --rating, --method, --memo, --notes, --equipment, or --quick-decrement-amount.');
       process.exit(2);
     }
 

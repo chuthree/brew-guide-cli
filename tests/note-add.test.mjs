@@ -41,6 +41,56 @@ test('brew-guide note add --dry-run --format json outputs structured JSON', () =
   assert.equal(payload.note.method, 'V60');
 });
 
+test('brew-guide note add --quick-decrement-amount --dry-run creates a change-record note', () => {
+  const result = runCliSync([
+    'note',
+    'add',
+    '--bean-id',
+    'bean_123',
+    '--quick-decrement-amount',
+    '1.5',
+    '--dry-run',
+    '--format',
+    'json',
+  ]);
+
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.dryRun, true);
+  assert.equal(payload.note.beanId, 'bean_123');
+  assert.equal(payload.note.source, 'quick-decrement');
+  assert.equal(payload.note.method, '');
+  assert.equal(payload.note.equipment, '');
+  assert.equal(payload.note.rating, 0);
+  assert.equal(payload.note.notes, '快捷扣除');
+  assert.equal(payload.note.totalTime, 0);
+  assert.equal(payload.note.quickDecrementAmount, 1.5);
+  assert.equal(payload.note.params.coffee, '1.5g');
+});
+
+test('brew-guide note add --dry-run can include coffee and water params', () => {
+  const result = runCliSync([
+    'note',
+    'add',
+    '--bean-id',
+    'bean_123',
+    '--method',
+    '意式浓缩',
+    '--coffee',
+    '18g',
+    '--water',
+    '36g',
+    '--dry-run',
+    '--format',
+    'json',
+  ]);
+
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.note.params.coffee, '18g');
+  assert.equal(payload.note.params.water, '36g');
+});
+
 test('brew-guide note add --dry-run still succeeds when no credentials exist', () => {
   const result = runCliSync(
     [

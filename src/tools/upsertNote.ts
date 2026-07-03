@@ -13,7 +13,7 @@ import { getErrorMessage, invalidParamsResult, isRecord, textResult } from '../l
  *     rating (0-5), taste {body,acidity,sweetness,bitterness},
  *     notes, timestamp (unix ms), totalTime (number),
  *     params { temp, ratio, water, coffee, grindSize, stages },
- *     source }
+ *     source, quickDecrementAmount }
  *
  * 此 schema 同时接受旧的扁平字段（score/flavor/memo/brewedAt/brewTime/waterTemp/
  * ratio/grindSize），并在写入前转换到真实形状，保持 CLI 向后兼容。
@@ -30,6 +30,7 @@ export const upsertNoteParameters = Type.Object({
       timestamp: Type.Optional(Type.Number({ description: 'Brew timestamp as unix ms.' })),
       notes: Type.Optional(Type.String({ description: 'Free-form notes.' })),
       source: Type.Optional(Type.String({ description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' })),
+      quickDecrementAmount: Type.Optional(Type.Number({ description: 'Deducted grams for quick-decrement records.' })),
       // Legacy flat fields — transformed on write:
       grindSize: Type.Optional(Type.String({ description: '[legacy] → params.grindSize.' })),
       waterTemp: Type.Optional(Type.Number({ description: '[legacy] → params.temp (°C).' })),
